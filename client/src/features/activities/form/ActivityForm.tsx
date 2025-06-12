@@ -1,13 +1,15 @@
 import { Box, Button, Paper, TextField, Typography } from "@mui/material";
 import type { FormEvent } from "react";
+import { useActivities } from "../../../lib/hooks/useActivities";
 
 type Props = {
   closeForm: () => void;
   activity?: Activity;
-  submitForm: (activity: Activity) => void;
 };
-const ActivityForm = ({ closeForm, activity, submitForm }: Props) => {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+const ActivityForm = ({ closeForm, activity }: Props) => {
+  const { updateActivity, createActivity } = useActivities();
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -17,10 +19,14 @@ const ActivityForm = ({ closeForm, activity, submitForm }: Props) => {
       data[key] = value;
     });
 
-    if (activity) data.id = activity.id;
-
-    console.log(data);
-    submitForm(data as unknown as Activity);
+    if (activity) {
+      data.id = activity.id;
+      await updateActivity.mutateAsync(data as unknown as Activity);
+      closeForm();
+    } else {
+      await createActivity.mutateAsync(data as unknown as Activity);
+      closeForm();
+    }
   };
 
   return (
@@ -52,7 +58,11 @@ const ActivityForm = ({ closeForm, activity, submitForm }: Props) => {
           label="Date"
           type="date"
           name="date"
-          defaultValue={activity?.date}
+          defaultValue={
+            activity?.date
+              ? new Date(activity.date).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0]
+          }
         />
         <TextField label="City" name="city" defaultValue={activity?.city} />
         <TextField label="Venue" name="venue" defaultValue={activity?.venue} />
@@ -65,7 +75,12 @@ const ActivityForm = ({ closeForm, activity, submitForm }: Props) => {
           <Button color="inherit" onClick={closeForm}>
             Cancel
           </Button>
-          <Button color="success" variant="contained" type="submit">
+          <Button
+            color="success"
+            variant="contained"
+            type="submit"
+            disabled={updateActivity.isPending || createActivity.isPending}
+          >
             Submit
           </Button>
         </Box>
