@@ -1,13 +1,13 @@
 import { Box, Button, Paper, TextField, Typography } from "@mui/material";
 import type { FormEvent } from "react";
 import { useActivities } from "../../../lib/hooks/useActivities";
+import { useNavigate, useParams } from "react-router";
 
-type Props = {
-  closeForm: () => void;
-  activity?: Activity;
-};
-const ActivityForm = ({ closeForm, activity }: Props) => {
-  const { updateActivity, createActivity } = useActivities();
+const ActivityForm = () => {
+  const { id } = useParams();
+  const { updateActivity, createActivity, activity, isLoadingActivity } =
+    useActivities(id);
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -22,17 +22,22 @@ const ActivityForm = ({ closeForm, activity }: Props) => {
     if (activity) {
       data.id = activity.id;
       await updateActivity.mutateAsync(data as unknown as Activity);
-      closeForm();
+      navigate(`manage/${activity.id}`);
     } else {
-      await createActivity.mutateAsync(data as unknown as Activity);
-      closeForm();
+      await createActivity.mutate(data as unknown as Activity, {
+        onSuccess: (id) => {
+          navigate(`/activities/${id}`);
+        },
+      });
     }
   };
+
+  if (isLoadingActivity) return <Typography>Loading...</Typography>;
 
   return (
     <Paper sx={{ borderRadius: 3, padding: 3 }}>
       <Typography variant="h5" gutterBottom color="primary">
-        Create activity
+        {activity ? "Edit activity" : "Create activity"}
       </Typography>
       <Box
         component="form"
@@ -72,9 +77,7 @@ const ActivityForm = ({ closeForm, activity }: Props) => {
           gap={3}
           defaultValue={activity?.title}
         >
-          <Button color="inherit" onClick={closeForm}>
-            Cancel
-          </Button>
+          <Button color="inherit">Cancel</Button>
           <Button
             color="success"
             variant="contained"
