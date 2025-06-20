@@ -1,5 +1,8 @@
+using API.Middleware;
 using Application.Activities.Queries;
+using Application.Activities.Validators;
 using Application.Core;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Scalar.AspNetCore;
@@ -14,8 +17,14 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddCors();
 builder.Services.AddMediatR(x =>
-    x.RegisterServicesFromAssemblyContaining<GetActivityList.Handler>());
+{
+    x.RegisterServicesFromAssemblyContaining<GetActivityList.Handler>();
+    x.AddOpenBehavior(typeof(ValidationBehavior<,>));
+}
+   );
 builder.Services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+builder.Services.AddValidatorsFromAssemblyContaining<CreateActivityValidator>();
+builder.Services.AddTransient<ExceptionMiddleware>();
 
 var app = builder.Build();
 
@@ -23,12 +32,13 @@ if (app.Environment.IsDevelopment())
 {
     app.MapScalarApiReference(options =>
     {
-        options.WithTitle("OPAT API Reference");
+        options.WithTitle("Reactivities");
         options.WithTheme(ScalarTheme.DeepSpace);
         options.WithSidebar(true);
     });
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:3000", "https://localhost:3000"));
 
 app.MapControllers();
